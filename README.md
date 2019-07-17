@@ -1,2 +1,2 @@
-# Rehau-POC 前端界面
+# Rehau-POC 界面
 Bootstrap + Vue + Egg
