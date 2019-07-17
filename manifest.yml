@@ -1,0 +1,9 @@
+---
+applications:
+- name: rehauml
+  service: 
+  - my-ml-foundation
+  memory: 1024M
+  instances: 1
+  routes:
+  - route: https://rehau.cfapps.eu10.hana.ondemand.com

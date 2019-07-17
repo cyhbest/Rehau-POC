@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Image Classification</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./lib/css/bootstrap.min.css" />
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script> -->
+  <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script> -->
+  <script src="./lib/js/vue.min.js"></script>
+  <script src="./lib/js/axios.min.js"></script>
+</head>
+
+<body>
+  <div id="app" class="container">
+    <div class="jumbotron">
+      <h1>Rehau PoC of auto defect detection</h1>
+    </div>
+    <div class="alert alert-info" v-if="info">
+      <strong>Info!</strong> {{ info }}
+    </div>
+    <div class="alert alert-warning mt-1" v-if="warning">
+      <strong>Warning!</strong> {{ warning }}
+    </div>
+    <div class="row">
+      <div class="input-group mr-sm-2 col-sm-4">
+        <label for="thresholdRange">Lower Bound Percent: {{ threshold }}%</label>
+        <input type="range" class="custom-range" id="thresholdRange" v-model:value="threshold" min="0" max="100"
+          v-on:change="drawCanvas" />
+      </div>
+      <div class="custom-file mr-sm-2 col-sm-4">
+        <label for="sourceImage" class="custom-file-label" v-text="fileLabel"></label>
+        <input type="file" class="custom-file-input" id="sourceImage" accept="image/*" v-on:change="uploadFile"
+          ref="fileInput" />
+      </div>
+      <div class="invisible">
+        <input type="hidden" name="modelName" value="" ref="modelName">
+        <input type="hidden" name="modelVersion" value="" ref="modelVersion">
+      </div>
+    </div>
+    <div class="mt-5">
+      <image v-if="loading"
+        src="data:image/gif;base64,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"
+        alt="keep loading" />
+      <canvas v-show="!loading" ref="canvas"></canvas>
+      <image style="display:none" ref="uploadImage" alt="current upload image" />
+    </div>
+  </div>
+
+  <script>
+    let vm = new Vue({
+      el: "#app",
+      data: {
+        info: null,
+        warning: null,
+        threshold: "90",
+        loading: false,
+        fileLabel: "Upload Image"
+      },
+      beforeCreate() {
+        let _this = this
+        axios.interceptors.request.use(
+          function (config) {
+            // Do something before request is sent
+            return config
+          },
+          function (error) {
+            // Do something with request error
+            _this.alertError(error.message)
+            return Promise.reject(error)
+          }
+        )
+
+        axios.interceptors.response.use(
+          function (response) {
+            // Do something with response data
+            return response
+          },
+          function (error) {
+            // Do something with response error
+            _this.alertError(error.message)
+            return Promise.reject(error)
+          }
+        )
+      },
+      created() { },
+      methods: {
+        alertError(msg) {
+          this.info = null
+          this.warning = msg
+        },
+        drawCanvas() {
+          if (!this.model) return
+          const scores = this.model.detection_scores
+          const boxes = this.model.detection_boxes
+          const lowerBound = this.threshold
+
+          const canvas = this.$refs.canvas
+          const ctx = canvas.getContext("2d")
+
+          const image = this.$refs.uploadImage
+          canvas.width = image.width
+          canvas.height = image.height
+          ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, image.width, image.height)
+
+          for (let i = 0; i < scores.length; i++) {
+            let score = scores[i] * 100
+            if (score < lowerBound) {
+              break
+            }
+
+            let y1 = boxes[i][0] * image.height,
+              x1 = boxes[i][1] * image.width
+            let y2 = boxes[i][2] * image.height,
+              x2 = boxes[i][3] * image.width
+            let width = x2 - x1,
+              height = y2 - y1
+
+            ctx.strokeStyle = "rgb(255, 0, 0)"
+            ctx.strokeRect(x1, y1, width, height)
+
+            ctx.fillStyle = "red"
+            ctx.font = "16px arial"
+            ctx.fillText(`${score.toFixed(2)}%`, x1, y2)
+          }
+        },
+        uploadFile() {
+          // Update file label
+          const file = this.$refs.fileInput.files[0]
+          this.fileLabel = file.name
+          this.$refs.uploadImage.src = window.URL.createObjectURL(file)
+
+          // Display loading image
+          this.model = null
+          this.warning = null
+          this.info = "The image is uploading now."
+          this.loading = true
+
+          let token = this.processFile("/public/ml.json")
+        },
+        processFile(configPath) {
+          const _this = this
+          if (!_this.configJson) {
+            axios
+              .get(configPath)
+              .then(function (response) {
+                _this.configJson = response.data
+                _this.getAuthToken(response.data)
+              })
+              .catch(function (error) {
+                _this.alertError(error)
+              })
+          } else {
+            _this.getAuthToken(_this.configJson)
+          }
+        },
+        getAuthToken(configJson) {
+          const mlAuthURL = configJson.mlurl
+          const mlBasicAuth = configJson.mlBasicAuth
+          const _this = this
+
+          if (!_this.authToken) {
+            axios({
+              method: "get",
+              url: mlAuthURL,
+              headers: {
+                Authorization: mlBasicAuth
+              }
+            })
+              .then(function (response) {
+                _this.authToken = "Bearer " + response.data.access_token
+                _this.info = "Succeed to get auth token."
+                _this.callmlService({
+                  token: _this.authToken,
+                  ...configJson
+                })
+              })
+              .catch(function (error) {
+                _this.alertError(error)
+              })
+          } else {
+            _this.callmlService({
+              token: _this.authToken,
+              ...configJson
+            })
+          }
+        },
+        callmlService: function (configJson) {
+          const _this = this
+          const formData = new window.FormData()
+          formData.append("file", this.$refs.fileInput.files[0])
+          const localModel = this.$refs.modelName.value
+          const localVersion = this.$refs.modelVersion.value
+          formData.append("modelName", localModel ? localModel : configJson.modelName)
+          formData.append("modelVersion", localVersion ? localVersion : configJson.modelVersion)
+
+          // let csrftoken = window.Cookies.get("csrfToken")
+
+          axios({
+            method: "post",
+            url: "/api/v1/object-detection",
+            headers: {
+              Authorization: configJson.token
+              // 'x-csrf-token': csrftoken
+            },
+            data: formData
+          })
+            .then(function (response) {
+              _this.info = null
+              _this.loading = false
+              _this.model = response.data
+              _this.drawCanvas()
+            })
+            .catch(function (error) {
+              _this.alertError(error)
+            })
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>
